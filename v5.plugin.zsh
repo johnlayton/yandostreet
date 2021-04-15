@@ -2,7 +2,7 @@
 # Init
 #####################################################################
 
-export V5_API_DEBUG=1
+export V5_API_DEBUG=0
 
 function v5-random-string () {
   cat /dev/urandom | base64 | tr -dc '0-9a-zA-Z' | head -c10
