@@ -111,10 +111,10 @@ function _v5 {
     _describe 'command' cmds
   elif (( CURRENT == 3 )); then
       subcmds=(
-      "list:List ${words[1]}"
-      "show:show ${words[1]}"
-      "create:Create a new ${words[1]}"
-      "import:Import ${words[1]} resource"
+      "list:List ${words[2]}"
+      "show:show ${words[2]}"
+      "create:Create a new ${words[2]}"
+      "import:Import ${words[2]} resource"
       )
       _describe 'command' subcmds
   elif (( CURRENT == 4 )); then
@@ -146,7 +146,9 @@ Usage: v5 <command> [options]
 
 Available commands:
 
-    init         Manage workspaces
+    init         Show initialisation configuration
+    help         Show this help
+    debug        Toggle debug
     workspace    Manage workspaces
     contact      Manage contacts
     resource     Manage resources
