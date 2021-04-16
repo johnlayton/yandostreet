@@ -191,6 +191,8 @@ Available commands:
     contact      Manage contacts
     resource     Manage resources
     message      Manage messages
+    email        Send plain and rich emails
+    sms          Send plain and rich sms
 
 EOF
 }

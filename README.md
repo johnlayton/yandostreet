@@ -36,15 +36,21 @@ source ~/.v5/v5.plugin.zsh
 > v5 init
 ```
 
+#### Workspace 
+
 ```zsh
 > v5 workspace list
 ```
-![](./images/7ktY8hLycX/asciinema-recording.gif)
+
+```zsh
+> v5 workspace show 
+```
 
 ```zsh
 > v5 workspace select 
 ```
 
 ```zsh
-> v5 workspace show 
+> v5 workspace create <file|name> 
 ```
+

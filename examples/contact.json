@@ -1,0 +1,27 @@
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "status": "A",
+  "timezone": "Australia/Melbourne",
+  "workEmailAddress1": "jsmith@testcompany.com",
+  "workMobilePhone1": "61423456789",
+  "workCountry": "Australia",
+  "locations": [{
+    "longitude": -12.4964,
+    "latitude": 41.9028,
+    "type": "CurrentLocation"
+  }],
+  "messagingoptions": [{
+    "channel": "sms",
+    "enabled": "true",
+    "primary": "WorkMobilePhone1"
+  },{
+    "channel": "email",
+    "enabled": "true",
+    "primary": "WorkEmailAddress1"
+  },{
+    "channel": "voice",
+    "enabled": "true",
+    "primary": "WorkMobilePhone1"
+  }]
+}
