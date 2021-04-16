@@ -23,17 +23,17 @@ pushd $HOME && \
   git clone git@github.com:johnlayton/yandostreet.git .v5 && \
   popd || echo "I'm broken"
 ```
-
 ```zsh
 source ~/.v5/v5.plugin.zsh
 ```
+![](./images/9fzJPvcieQ/asciinema-recording.gif)
 
 ### Usage
 
 #### 
 
 ```zsh
-> v5 init | jq . -r
+> v5 init
 ```
 
 ```zsh
