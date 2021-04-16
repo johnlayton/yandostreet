@@ -204,9 +204,10 @@ EOF
 function _v5::init () {
   if [ -n "${WHISPIR_API_USER}" ] && [ -n "${WHISPIR_API_PASS}" ]; then
     echo "============================================="
-    echo "WHISPIR_API_TOKEN .... ${WHISPIR_API_TOKEN}"
-    echo "WHISPIR_API_USER ..... ${WHISPIR_API_USER}"
-    echo "WHISPIR_API_PASS ..... ${WHISPIR_API_PASS}"
+    echo "WHISPIR_API_ENDPOINT .. ${WHISPIR_API_ENDPOINT}"
+    echo "WHISPIR_API_TOKEN ..... ${WHISPIR_API_TOKEN}"
+    echo "WHISPIR_API_USER ...... ${WHISPIR_API_USER}"
+    echo "WHISPIR_API_PASS ...... ${WHISPIR_API_PASS}"
     echo "---------------------------------------------"
     echo "V5_API_DEBUG ......... ${V5_API_DEBUG}"
     echo "V5_WORKSPACE ......... ${V5_WORKSPACE}"
