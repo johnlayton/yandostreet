@@ -12,6 +12,13 @@ pushd $ZSH/custom/plugins && \
   git clone git@github.com:johnlayton/yandostreet.git v5 && \
   popd || echo "I'm broken"
 ```
+or
+```zsh
+pushd $ZSH/custom/plugins && \
+  git clone https://github.com/johnlayton/yandostreet.git v5 && \
+  popd || echo "I'm broken"
+```
+and add to the plugins block in `~/.zshrc` 
 ```zsh
 plugins=(... v5)
 ```
