@@ -3,6 +3,7 @@
 #####################################################################
 
 export V5_API_DEBUG=0
+export V5_WORKSPACE=0
 
 function v5-random-string () {
   cat /dev/urandom | base64 | tr -dc '0-9a-zA-Z' | head -c10
@@ -95,42 +96,66 @@ function v5 () {
   _v5::$command "$@"
 }
 
-function _v5 {
-  local -a cmds subcmds
-  cmds=(
-    'help:Usage information'
-    'debug:Enable debugging curl commands'
-    'init:Initialisation information'
-    'workspace:Manage Workspaces'
-    'contact:Manage Contacts'
-    'resource:Manage Resources'
-    'message:Manage Messages'
-  )
+function v5-message-show () {
+  v5 message list   | jq -r ".messages" | \
+    v5-stream | v5-fields id projectName | \
+    jq --slurp | jq -r '.[] | "\(.id):\(.projectName)"'
+}
 
+function v5-workspace-show () {
+  v5 workspace list | jq -r ".workspaces" | \
+    v5-stream | v5-fields id projectName | \
+    jq --slurp | jq -r '.[] | "\(.id):\(.projectName)"'
+}
+
+function v5-contact-show () {
+  v5 contact list   | jq -r ".contacts" | \
+    v5-stream | v5-fields id firstName lastName | \
+    jq --slurp | jq -r '.[] | "\(.id):\(.firstName) \(.lastName)"'
+}
+
+function v5-resource-show () {
+  v5 resource list   | jq -r ".resources" | \
+    v5-stream | v5-fields id name| \
+    jq --slurp | jq -r '.[] | "\(.id):\(.name)"'
+}
+
+function _v5 {
   if (( CURRENT == 2 )); then
-    _describe 'command' cmds
+      subcmds=(
+        "help:Usage information"
+        "debug:Enable debugging curl commands"
+        "init:Initialisation information"
+        "workspace:Manage Workspaces"
+        "contact:Manage Contacts"
+        "resource:Manage Resources"
+        "message:Manage Messages"
+      )
+    _describe 'command' subcmds
   elif (( CURRENT == 3 )); then
       subcmds=(
-      "list:List ${words[2]}"
-      "show:show ${words[2]}"
-      "create:Create a new ${words[2]}"
-      "import:Import ${words[2]} resource"
+        "list:List ${words[2]}"
+        "show:show ${words[2]}"
+        "create:Create a new ${words[2]}"
+        "import:Import ${words[2]} resource"
+        "send:Send ${words[2]}"
       )
       _describe 'command' subcmds
   elif (( CURRENT == 4 )); then
       case "${words[1]}-${words[2]}-${words[3]}" in
-          v5-workspace-create)
+          v5-*-create)
             _files ;;
-          v5-*-list | v5-*-create | v5-*-import)
-            subcmds=($(v5 workspace list | jq -r ".workspaces" | v5-stream | v5-fields id projectName | jq --slurp | jq -r '.[] | "\(.id):\(.projectName)"'))
+          v5-workspace-select)
+            subcmds=("${(@f)$(v5-workspace-show)}")
             _describe 'command' subcmds ;;
-      esac
-  elif (( CURRENT == 5 )); then
-      case "${words[1]}-${words[2]}-${words[3]}" in
-          v5-*-list | v5-*-create)
-            _files ;;
+          v5-*-show)
+            subcmds=("${(@f)$(v5-${words[2]}-show)}")
+            _describe 'command' subcmds ;;
           v5-*-import)
-            subcmds=($(v5 resource list ${words[4]} | jq -r ".resources" | v5-stream | v5-fields id name | jq --slurp | jq -r '.[] | "\(.id):\(.name)"'))
+            subcmds=("${(@f)$(v5-resource-show)}")
+            _describe 'command' subcmds ;;
+          v5-*-send)
+            subcmds=("${(@f)$(v5-contact-show)}")
             _describe 'command' subcmds ;;
       esac
   fi
@@ -161,12 +186,15 @@ EOF
 # Init
 #####################################################################
 
-function _v5::init {
+function _v5::init () {
   if [ -n "${WHISPIR_API_USER}" ] && [ -n "${WHISPIR_API_PASS}" ]; then
     echo "============================================="
     echo "WHISPIR_API_TOKEN .... ${WHISPIR_API_TOKEN}"
     echo "WHISPIR_API_USER ..... ${WHISPIR_API_USER}"
     echo "WHISPIR_API_PASS ..... ${WHISPIR_API_PASS}"
+    echo "---------------------------------------------"
+    echo "V5_API_DEBUG ......... ${V5_API_DEBUG}"
+    echo "V5_WORKSPACE ......... ${V5_WORKSPACE}"
     echo "============================================="
   else
     echo "============================================="
@@ -174,6 +202,9 @@ function _v5::init {
     echo "WHISPIR_API_TOKEN=<Token>"
     echo "WHISPIR_API_USER=<User>"
     echo "WHISPIR_API_PASS=<Password>"
+    echo "---------------------------------------------"
+    echo "V5_API_DEBUG ......... ${V5_API_DEBUG}"
+    echo "V5_WORKSPACE ......... ${V5_WORKSPACE}"
     echo "============================================="
   fi
 }
@@ -201,6 +232,8 @@ Usage: v5 workspace <command> [options]
 Available commands:
 
   create [name]
+  select [id]
+  clear
   show   [id]
   list
 
@@ -220,6 +253,14 @@ function _v5::workspace::list () {
 
 function _v5::workspace::show () {
   v5-get "workspace" "workspaces/${1}"
+}
+
+function _v5::workspace::select () {
+  export V5_WORKSPACE=${1:-0}
+}
+
+function _v5::workspace::clear () {
+  export V5_WORKSPACE=0
 }
 
 function _v5::workspace::create () {
@@ -252,9 +293,9 @@ Usage: v5 contact <command> [options]
 
 Available commands:
 
-  create [workspace] [name]
-  show   [workspace] [id]
-  list   [workspace]
+  create [name]
+  show   [id]
+  list
 
 EOF
     return 1
@@ -267,25 +308,21 @@ EOF
 }
 
 function _v5::contact::list () {
-  if [ $# -eq 1 ]; then
-    v5-get "contact" "workspaces/${1}/contacts"
-  else
-    v5-get "contact" "contacts"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-get "contact" "contacts" ;;
+    *) v5-get "contact" "workspaces/${V5_WORKSPACE}/contacts" ;;
+  esac
 }
 
 function _v5::contact::show () {
-  if [ $# -eq 2 ]; then
-    v5-get "contact" "workspaces/${1}/contacts/${2}"
-  else
-    v5-get "contact" "contacts/${1}"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-get "contact" "contacts/${1}" ;;
+    *) v5-get "contact" "workspaces/${V5_WORKSPACE}/contacts/${1}" ;;
+  esac
 }
 
 function _v5::contact::import () {
-  local WORKSPACE=${1:-""}
-  local RESOURCE=${2:-""}
-
+  local RESOURCE=${1:-""}
   if [[ -n ${RESOURCE} ]]; then
     RESOURCE="{                                                   \
     \"resourceId\"     : \"${RESOURCE}\",                         \
@@ -305,17 +342,14 @@ function _v5::contact::import () {
 }"
   fi
 
-  if [ -n "${WORKSPACE}" ]
-  then
-    v5-post "importcontact" "workspaces/${WORKSPACE}/imports" "${RESOURCE}"
-  else
-    v5-post "importcontact" "imports" "${RESOURCE}"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-post "importcontact" "imports" "${RESOURCE}" ;;
+    *) v5-post "importcontact" "workspaces/${V5_WORKSPACE}/imports" "${RESOURCE}" ;;
+  esac
 }
 
 function _v5::contact::create () {
-  local WORKSPACE=${1:-""}
-  local CONTACT=${2:-$(</dev/stdin)}
+  local CONTACT=${1:-$(</dev/stdin)}
 
   if [[ -f ${CONTACT} ]]; then
     CONTACT=$(cat ${CONTACT})
@@ -351,12 +385,10 @@ function _v5::contact::create () {
 }"
   fi
 
-  if [ -n "${WORKSPACE}" ]
-  then
-    v5-post "contact" "workspaces/${1}/contacts" "${CONTACT}"
-  else
-    v5-post "contact" "contacts" "${CONTACT}"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-post "contact" "contacts" "${CONTACT}" ;;
+    *) v5-post "contact" "workspaces/${V5_WORKSPACE}/contacts" "${CONTACT}" ;;
+  esac
 }
 
 #####################################################################
@@ -370,9 +402,9 @@ Usage: v5 resource <command> [options]
 
 Available commands:
 
-  create [workspace] [name]
-  show   [workspace] [id]
-  list   [workspace]
+  create [name]
+  show   [id]
+  list
 
 EOF
     return 1
@@ -385,24 +417,21 @@ EOF
 }
 
 function _v5::resource::list () {
-  if [ $# -eq 1 ]; then
-    v5-get "resource" "workspaces/${1}/resources"
-  else
-    v5-get "resource" "resources"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-get "resource" "resources" ;;
+    *) v5-get "resource" "workspaces/${V5_WORKSPACE}/resources" ;;
+  esac
 }
 
 function _v5::resource::show () {
-  if [ $# -eq 2 ]; then
-    v5-get "resource" "workspaces/${1}/resources/${2}"
-  else
-    v5-get "resource" "workspaces/${1}/resources"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-get "resource" "resources/${1}" ;;
+    *) v5-get "resource" "workspaces/${V5_WORKSPACE}/resources/${1}" ;;
+  esac
 }
 
 function _v5::resource::create () {
-  local WORKSPACE=${1:-""}
-  local RESOURCE=${2:-$(</dev/stdin)}
+  local RESOURCE=${1:-$(</dev/stdin)}
 
   if [[ -f ${RESOURCE} ]]; then
     RESOURCE="{                                           \
@@ -413,12 +442,10 @@ function _v5::resource::create () {
   }"
   fi
 
-  if [ -n "${WORKSPACE}" ]
-  then
-    v5-post "resource" "workspaces/${1}/resources" "${RESOURCE}"
-  else
-    v5-post "resource" "resources" "${RESOURCE}"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-post "resource" "resources" "${RESOURCE}" ;;
+    *) v5-post "resource" "workspaces/${V5_WORKSPACE}/resources" "${RESOURCE}" ;;
+  esac
 }
 
 #####################################################################
@@ -432,9 +459,9 @@ Usage: v5 message <command> [options]
 
 Available commands:
 
-  create [workspace] [name]
-  show   [workspace] [id]
-  list   [workspace]
+  create [name]
+  show   [id]
+  list
 
 EOF
     return 1
@@ -447,17 +474,16 @@ EOF
 }
 
 function _v5::message::list () {
-  if [ $# -eq 1 ]; then
-    v5-get "message" "workspaces/${1}/messages"
-  else
-    v5-get "message" "messages"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-get "message" "messages" ;;
+    *) v5-get "message" "workspaces/${V5_WORKSPACE}/messages" ;;
+  esac
 }
 
 function _v5::message::show () {
-  if [ $# -eq 2 ]; then
-    v5-get "message" "workspaces/${1}/message/${2}"
-  else
-    v5-get "message" "workspaces/${1}/message"
-  fi
+  case "${V5_WORKSPACE}" in
+    0) v5-get "message" "messages/${1}" ;;
+    *) v5-get "message" "workspaces/${V5_WORKSPACE}/messages/${1}" ;;
+  esac
 }
+
