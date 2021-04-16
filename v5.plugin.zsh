@@ -12,7 +12,7 @@ function v5-random-string () {
 function v5-curl-flags () {
   case "${V5_API_DEBUG}" in
     0) echo "--silent" ;;
-    1) echo "--verbose" ;;
+    1) echo "--verbose --trace-ascii /dev/stderr" ;;
   esac
 }
 
@@ -98,8 +98,9 @@ function v5 () {
 
 function v5-message-show () {
   v5 message list   | jq -r ".messages" | \
-    v5-stream | v5-fields id projectName | \
-    jq --slurp | jq -r '.[] | "\(.id):\(.projectName)"'
+    v5-stream | v5-fields link createdTime subject | \
+    jq -r '{ subject : .subject, created : (.createdTime/1000 | strflocaltime("[%Y-%m-%dT%H:%M:%S]")), id : .link[] | select(.method=="GET") | .uri | split("\/") | last}' |
+    jq --slurp | jq -r '. | sort_by(.created) | reverse | .[] | "\(.id):\(.created) \(.subject)"'
 }
 
 function v5-workspace-show () {
@@ -130,17 +131,32 @@ function _v5 {
         "contact:Manage Contacts"
         "resource:Manage Resources"
         "message:Manage Messages"
+        "email:Send Email"
+        "sms:Send SMS"
       )
     _describe 'command' subcmds
   elif (( CURRENT == 3 )); then
-      subcmds=(
-        "list:List ${words[2]}"
-        "show:show ${words[2]}"
-        "create:Create a new ${words[2]}"
-        "import:Import ${words[2]} resource"
-        "send:Send ${words[2]}"
-      )
-      _describe 'command' subcmds
+      case "${words[2]}" in
+        email | sms | rich-email)
+          subcmds=("${(@f)$(v5-contact-show)}")
+          _describe 'command' subcmds ;;
+        contact)
+          subcmds=(
+            "list:List ${words[2]}"
+            "show:show ${words[2]}"
+            "create:Create a new ${words[2]}"
+            "import:Import ${words[2]} resource"
+            "send:Send ${words[2]}"
+          )
+          _describe 'command' subcmds ;;
+        *)
+          subcmds=(
+            "list:List ${words[2]}"
+            "show:show ${words[2]}"
+            "create:Create a new ${words[2]}"
+          )
+          _describe 'command' subcmds ;;
+      esac
   elif (( CURRENT == 4 )); then
       case "${words[1]}-${words[2]}-${words[3]}" in
           v5-*-create)
@@ -153,9 +169,6 @@ function _v5 {
             _describe 'command' subcmds ;;
           v5-*-import)
             subcmds=("${(@f)$(v5-resource-show)}")
-            _describe 'command' subcmds ;;
-          v5-*-send)
-            subcmds=("${(@f)$(v5-contact-show)}")
             _describe 'command' subcmds ;;
       esac
   fi
@@ -268,16 +281,16 @@ function _v5::workspace::create () {
   if [[ -f ${WORKSPACE} ]]; then
     v5-post "workspace" "workspaces" "$(cat ${WORKSPACE})"
   elif [[ -n ${WORKSPACE} ]]; then
-    v5-post "workspace" "workspaces" "{                         \
-      \"projectName\" : \"${WORKSPACE}\",                        \
-      \"billingcostcentre\" : \"$(wsp-random-string)\",          \
-      \"status\" : \"A\"                                         \
+    v5-post "workspace" "workspaces" "{
+      \"projectName\" : \"${WORKSPACE}\",
+      \"billingcostcentre\" : \"$(wsp-random-string)\",
+      \"status\" : \"A\"
 }"
   else
-    v5-post "workspace" "workspaces" "{                         \
-      \"projectName\" : \"$(wsp-random-string)\",                \
-      \"billingcostcentre\" : \"$(wsp-random-string)\",          \
-      \"status\" : \"A\"                                         \
+    v5-post "workspace" "workspaces" "{
+      \"projectName\" : \"$(wsp-random-string)\",
+      \"billingcostcentre\" : \"$(wsp-random-string)\",
+      \"status\" : \"A\"
 }"
   fi
 }
@@ -324,21 +337,21 @@ function _v5::contact::show () {
 function _v5::contact::import () {
   local RESOURCE=${1:-""}
   if [[ -n ${RESOURCE} ]]; then
-    RESOURCE="{                                                   \
-    \"resourceId\"     : \"${RESOURCE}\",                         \
-    \"importType\"     : \"contact\",                             \
-    \"importOptions\": {                                          \
-      \"fieldMapping\" : {                                        \
-            \"firstName\"         : \"FirstName\",                \
-            \"lastName\"          : \"LastName\",                 \
+    RESOURCE="{
+    \"resourceId\"     : \"${RESOURCE}\",
+    \"importType\"     : \"contact\",
+    \"importOptions\": {
+      \"fieldMapping\" : {
+            \"firstName\"         : \"FirstName\",
+            \"lastName\"          : \"LastName\",
             \"workEmailAddress1\" : \"WorkEmailAddressPrimary\",  \
-            \"workMobilePhone1\"  : \"WorkMobilePhonePrimary\",   \
-            \"workCountry\"       : \"WorkCountry\",              \
-            \"timezone\"          : \"Timezone\",                 \
-            \"role\"              : \"Role\"                      \
-      },                                                          \
-      \"importMode\" : \"replace\"                                \
-    }                                                             \
+            \"workMobilePhone1\"  : \"WorkMobilePhonePrimary\",
+            \"workCountry\"       : \"WorkCountry\",
+            \"timezone\"          : \"Timezone\",
+            \"role\"              : \"Role\"
+      },
+      \"importMode\" : \"replace\"
+    }
 }"
   fi
 
@@ -356,32 +369,32 @@ function _v5::contact::create () {
   fi
 
   if [[ -z "${CONTACT}" ]]; then
-    CONTACT="{                                                                      \
-    \"firstName\"         : \"$(wsp-random-string)\",                               \
-    \"lastName\"          : \"$(wsp-random-string)\",                               \
-    \"status\"            : \"A\",                                                  \
-    \"timezone\"          : \"Australia/Melbourne\",                                \
-    \"workEmailAddress1\" : \"$(wsp-random-string)@$(wsp-random-string).com\",      \
-    \"workMobilePhone1\"  : \"614$(wsp-random-number)$(wsp-random-number)\",        \
-    \"workCountry\"       : \"Australia\",                                          \
-    \"locations\" : [{                                                              \
-          \"longitude\" : -12.4964,                                                 \
-          \"latitude\"  : 41.9028,                                                  \
-          \"type\"      : \"CurrentLocation\"                                       \
-    }],                                                                             \
-    \"messagingoptions\" : [{                                                       \
-          \"channel\" : \"sms\",                                                    \
-          \"enabled\" : \"true\",                                                   \
-          \"primary\" : \"WorkMobilePhone1\"                                        \
-        },{                                                                         \
-          \"channel\" : \"email\",                                                  \
-          \"enabled\" : \"true\",                                                   \
-          \"primary\" : \"WorkEmailAddress1\"                                       \
-        },{                                                                         \
-          \"channel\" : \"voice\",                                                  \
-          \"enabled\" : \"true\",                                                   \
-          \"primary\" : \"WorkMobilePhone1\"                                        \
-    }]                                                                              \
+    CONTACT="{
+    \"firstName\"         : \"$(wsp-random-string)\",
+    \"lastName\"          : \"$(wsp-random-string)\",
+    \"status\"            : \"A\",
+    \"timezone\"          : \"Australia/Melbourne\",
+    \"workEmailAddress1\" : \"$(wsp-random-string)@$(wsp-random-string).com\",
+    \"workMobilePhone1\"  : \"614$(wsp-random-number)$(wsp-random-number)\",
+    \"workCountry\"       : \"Australia\",
+    \"locations\" : [{
+          \"longitude\" : -12.4964,
+          \"latitude\"  : 41.9028,
+          \"type\"      : \"CurrentLocation\"
+    }],
+    \"messagingoptions\" : [{
+          \"channel\" : \"sms\",
+          \"enabled\" : \"true\",
+          \"primary\" : \"WorkMobilePhone1\"
+        },{
+          \"channel\" : \"email\",
+          \"enabled\" : \"true\",
+          \"primary\" : \"WorkEmailAddress1\"
+        },{
+          \"channel\" : \"voice\",
+          \"enabled\" : \"true\",
+          \"primary\" : \"WorkMobilePhone1\"
+    }]
 }"
   fi
 
@@ -434,11 +447,11 @@ function _v5::resource::create () {
   local RESOURCE=${1:-$(</dev/stdin)}
 
   if [[ -f ${RESOURCE} ]]; then
-    RESOURCE="{                                           \
-    \"name\"     : \"${RESOURCE}\",                       \
-    \"scope\"    : \"private\",                           \
-    \"mimeType\" : \"text/csv\",                          \
-    \"derefUri\" : \"$(cat ${RESOURCE} | base64 -)\"      \
+    RESOURCE="{
+    \"name\"     : \"${RESOURCE}\",
+    \"scope\"    : \"private\",
+    \"mimeType\" : \"text/csv\",
+    \"derefUri\" : \"$(cat ${RESOURCE} | base64 -)\"
   }"
   fi
 
@@ -487,3 +500,100 @@ function _v5::message::show () {
   esac
 }
 
+#####################################################################
+# Email
+#####################################################################
+
+function v5-create-sms () {
+  local BODY=${1:-""}
+  if [[ -f ${BODY} ]]; then
+    echo "\"body\" : \"$(cat ${BODY} | tr '\n' ' ')\""
+  elif [[ -n ${BODY} ]]; then
+    echo "\"body\" : \"${BODY}\""
+  else
+    echo ""
+  fi
+}
+
+function v5-create-email () {
+  local BODY=${1:-""}
+  if [[ -f ${BODY} ]]; then
+    echo "\"email\" : {
+      \"body\" : \"$(cat ${BODY} | tr '\n' ' ')\",
+      \"type\" : \"text/plain\"
+    }"
+  elif [[ -n ${BODY} ]]; then
+    echo "\"email\" : {
+      \"body\" : \"${BODY}\",
+      \"type\" : \"text/plain\"
+    }"
+  else
+    echo ""
+  fi
+}
+
+function v5-create-web () {
+  local BODY=${1:-""}
+  if [[ -f ${BODY} ]]; then
+    echo ", \"web\" : {
+      \"body\" : \"$(cat ${BODY} | tr '\n' ' ')\",
+      \"type\" : \"text/html\"
+    }"
+  elif [[ -n ${BODY} ]]; then
+    echo ", \"web\" : {
+      \"body\" : \"${BODY}\",
+      \"type\" : \"text/html\"
+    }"
+  else
+    echo ""
+  fi
+}
+
+function _v5::email () {
+
+  local MRI=$(v5 contact show ${1} | jq -r '.mri')
+
+  local SUBJ=${2:-""}
+  local BODY=${3:-""}
+  local WEBM=${4:-""}
+
+  local MESSAGE="{
+   \"to\"      : \"${MRI}\",
+   \"subject\" : \"${SUBJ}\",
+   $(v5-create-email ${BODY})
+   $(v5-create-web ${WEBM})
+}"
+
+  logger header "Send Message"
+  logger info ${MESSAGE}
+
+  case "${V5_WORKSPACE}" in
+    0) v5-post "message" "messages" ${MESSAGE};;
+    *) v5-post "message" "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
+  esac
+}
+
+#####################################################################
+# SMS
+#####################################################################
+
+function _v5::sms () {
+
+  local MRI=$(v5 contact show ${1} | jq -r '.mri')
+
+  local SUBJ=${2:-""}
+  local BODY=${3:-""}
+  local WEBM=${4:-""}
+
+  local MESSAGE="{
+   \"to\"      : \"${MRI}\",
+   \"subject\" : \"${SUBJ}\",
+   $(v5-create-sms ${BODY})
+   $(v5-create-web ${WEBM})
+}"
+
+  case "${V5_WORKSPACE}" in
+    0) v5-post "message" "messages" ${MESSAGE};;
+    *) v5-post "message" "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
+  esac
+}

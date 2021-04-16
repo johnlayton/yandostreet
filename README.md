@@ -25,3 +25,24 @@ pushd $HOME && \
 ```zsh
 source ~/.v5/v5.plugin.zsh
 ```
+
+### Usage
+
+#### 
+
+```zsh
+> v5 init | jq . -r
+```
+
+```zsh
+> v5 workspace list
+```
+[Workspace List](./images/7ktY8hLycX/asciinema-recording.gif)
+
+```zsh
+> v5 workspace select 
+```
+
+```zsh
+> v5 workspace show 
+```
