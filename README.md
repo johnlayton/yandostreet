@@ -1,6 +1,8 @@
 # yandostreet
 
-## v5
+### Repository
+
+[Here](https://github.com/johnlayton/yandostreet)
 
 ### Setup oh-my-zsh
 
@@ -37,7 +39,7 @@ source ~/.v5/v5.plugin.zsh
 ```zsh
 > v5 workspace list
 ```
-[Workspace List](./images/7ktY8hLycX/asciinema-recording.gif)
+![](./images/7ktY8hLycX/asciinema-recording.gif)
 
 ```zsh
 > v5 workspace select 
