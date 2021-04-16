@@ -23,6 +23,13 @@ pushd $HOME && \
   git clone git@github.com:johnlayton/yandostreet.git .v5 && \
   popd || echo "I'm broken"
 ```
+or
+```zsh
+pushd $HOME && \
+  git clone https://github.com/johnlayton/yandostreet.git .v5 && \
+  popd || echo "I'm broken"
+```
+
 ```zsh
 source ~/.v5/v5.plugin.zsh
 ```
