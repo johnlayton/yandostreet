@@ -1,0 +1,8 @@
+<div id='content'>
+    <p>Hi <span id='first_name'> <span id='last_name'></span></p>
+    <p>This is the body of my rich message</p>
+    <script type='text/javascript'>
+        document.getElementById('first_name').innerHTML = Whispir.data.profile.firstname;
+        document.getElementById('last_name').innerHTML = Whispir.data.profile.lastname;
+    </script>
+</div>
