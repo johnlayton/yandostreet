@@ -9,6 +9,10 @@ function v5-random-string () {
   cat /dev/urandom | base64 | tr -dc '0-9a-zA-Z' | head -c10
 }
 
+function v5-trace-id () {
+  echo "Root=1-$(printf '%x' $(date +%s))-$(cat /dev/urandom | base64 | tr -dc '0-9' | head -c24)"
+}
+
 function v5-curl-flags () {
   case "${V5_API_DEBUG}" in
     0) echo "--silent" ;;
@@ -53,7 +57,8 @@ function v5-get () {
        --request GET \
        --header 'Accept: application/json' \
        --header "Authorization: Basic $(v5-auth)" \
-       --header "x-api-key: $(v5-token)" \
+       --header "X-Api-Key: $(v5-token)" \
+       --header "X-Amzn-Trace-Id: $(v5-trace-id)" \
        --header "Content-Type: application/vnd.whispir.${TYP}-v1+json" \
        --header "Accept: application/vnd.whispir.${TYP}-v1+json" \
        "${WHISPIR_API_ENDPOINT}${PTH}${QRY}"
@@ -72,7 +77,8 @@ function v5-post () {
        --request POST \
        --header 'Accept: application/json' \
        --header "Authorization: Basic $(v5-auth)" \
-       --header "x-api-key: $(v5-token)" \
+       --header "X-Api-Key: $(v5-token)" \
+       --header "X-Amzn-Trace-Id: $(v5-trace-id)" \
        --header "Content-Type: application/vnd.whispir.${TYP}-v1+json" \
        --header "Accept: application/vnd.whispir.${TYP}-v1+json" \
        --data-raw "${DTA}" \
