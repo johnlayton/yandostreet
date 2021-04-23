@@ -307,15 +307,15 @@ function _v5::workspace::clear () {
 function _v5::workspace::create () {
   local WORKSPACE=${1:-$(</dev/stdin)}
   if [[ -f ${WORKSPACE} ]]; then
-    v5-post "workspace" "workspaces" "$(cat ${WORKSPACE})"
+    v5-post $(v5-content-type "workspace") "workspaces" "$(cat ${WORKSPACE})"
   elif [[ -n ${WORKSPACE} ]]; then
-    v5-post "workspace" "workspaces" "{
+    v5-post $(v5-content-type "workspace") "workspaces" "{
       \"projectName\" : \"${WORKSPACE}\",
       \"billingcostcentre\" : \"$(wsp-random-string)\",
       \"status\" : \"A\"
 }"
   else
-    v5-post "workspace" "workspaces" "{
+    v5-post $(v5-content-type "workspace") "workspaces" "{
       \"projectName\" : \"$(wsp-random-string)\",
       \"billingcostcentre\" : \"$(wsp-random-string)\",
       \"status\" : \"A\"
