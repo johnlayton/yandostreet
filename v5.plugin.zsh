@@ -13,6 +13,10 @@ function v5-trace-id () {
   echo "Root=1-$(printf '%x' $(date +%s))-$(cat /dev/urandom | base64 | tr -dc '0-9' | head -c24)"
 }
 
+function v5-content-type () {
+  echo "application/vnd.whispir.${1}-v1+json"
+}
+
 function v5-curl-flags () {
   case "${V5_API_DEBUG}" in
     0) echo "--silent" ;;
@@ -59,8 +63,8 @@ function v5-get () {
        --header "Authorization: Basic $(v5-auth)" \
        --header "X-Api-Key: $(v5-token)" \
        --header "X-Amzn-Trace-Id: $(v5-trace-id)" \
-       --header "Content-Type: application/vnd.whispir.${TYP}-v1+json" \
-       --header "Accept: application/vnd.whispir.${TYP}-v1+json" \
+       --header "Content-Type: ${TYP}" \
+       --header "Accept: ${TYP}" \
        "${WHISPIR_API_ENDPOINT}${PTH}${QRY}"
 }
 
@@ -79,8 +83,8 @@ function v5-post () {
        --header "Authorization: Basic $(v5-auth)" \
        --header "X-Api-Key: $(v5-token)" \
        --header "X-Amzn-Trace-Id: $(v5-trace-id)" \
-       --header "Content-Type: application/vnd.whispir.${TYP}-v1+json" \
-       --header "Accept: application/vnd.whispir.${TYP}-v1+json" \
+       --header "Content-Type: ${TYP}" \
+       --header "Accept: ${TYP}" \
        --data-raw "${DTA}" \
        "${WHISPIR_API_ENDPOINT}${PTH}"
 }
@@ -149,17 +153,32 @@ function _v5 {
         contact)
           subcmds=(
             "list:List ${words[2]}"
-            "show:show ${words[2]}"
+            "show:Show ${words[2]}"
             "create:Create a new ${words[2]}"
             "import:Import ${words[2]} resource"
             "send:Send ${words[2]}"
           )
           _describe 'command' subcmds ;;
+        workspace)
+          subcmds=(
+            "list:List ${words[2]}"
+            "show:Show ${words[2]}"
+            "select:Select ${words[2]}"
+            "clear:Clear ${words[2]}"
+            "create:Create a new ${words[2]}"
+          )
+          _describe 'command' subcmds ;;
         *)
           subcmds=(
             "list:List ${words[2]}"
-            "show:show ${words[2]}"
+            "show:Show ${words[2]}"
             "create:Create a new ${words[2]}"
+          )
+          _describe 'command' subcmds ;;
+        sequence)
+          subcmds=(
+            "list:List ${words[2]}"
+            "show:Show ${words[2]}"
           )
           _describe 'command' subcmds ;;
       esac
@@ -270,11 +289,11 @@ EOF
 }
 
 function _v5::workspace::list () {
-  v5-get "workspace" "workspaces"
+  v5-get $(v5-content-type "workspace") "workspaces"
 }
 
 function _v5::workspace::show () {
-  v5-get "workspace" "workspaces/${1}"
+  v5-get $(v5-content-type "workspace") "workspaces/${1}"
 }
 
 function _v5::workspace::select () {
@@ -331,15 +350,15 @@ EOF
 
 function _v5::contact::list () {
   case "${V5_WORKSPACE}" in
-    0) v5-get "contact" "contacts" ;;
-    *) v5-get "contact" "workspaces/${V5_WORKSPACE}/contacts" ;;
+    0) v5-get $(v5-content-type "contact") "contacts" ;;
+    *) v5-get $(v5-content-type "contact") "workspaces/${V5_WORKSPACE}/contacts" ;;
   esac
 }
 
 function _v5::contact::show () {
   case "${V5_WORKSPACE}" in
-    0) v5-get "contact" "contacts/${1}" ;;
-    *) v5-get "contact" "workspaces/${V5_WORKSPACE}/contacts/${1}" ;;
+    0) v5-get $(v5-content-type "contact") "contacts/${1}" ;;
+    *) v5-get $(v5-content-type "contact") "workspaces/${V5_WORKSPACE}/contacts/${1}" ;;
   esac
 }
 
@@ -365,8 +384,8 @@ function _v5::contact::import () {
   fi
 
   case "${V5_WORKSPACE}" in
-    0) v5-post "importcontact" "imports" "${RESOURCE}" ;;
-    *) v5-post "importcontact" "workspaces/${V5_WORKSPACE}/imports" "${RESOURCE}" ;;
+    0) v5-post $(v5-content-type "importcontact") "imports" "${RESOURCE}" ;;
+    *) v5-post $(v5-content-type "importcontact") "workspaces/${V5_WORKSPACE}/imports" "${RESOURCE}" ;;
   esac
 }
 
@@ -408,8 +427,8 @@ function _v5::contact::create () {
   fi
 
   case "${V5_WORKSPACE}" in
-    0) v5-post "contact" "contacts" "${CONTACT}" ;;
-    *) v5-post "contact" "workspaces/${V5_WORKSPACE}/contacts" "${CONTACT}" ;;
+    0) v5-post $(v5-content-type "contact") "contacts" "${CONTACT}" ;;
+    *) v5-post $(v5-content-type "contact") "workspaces/${V5_WORKSPACE}/contacts" "${CONTACT}" ;;
   esac
 }
 
@@ -440,15 +459,15 @@ EOF
 
 function _v5::resource::list () {
   case "${V5_WORKSPACE}" in
-    0) v5-get "resource" "resources" ;;
-    *) v5-get "resource" "workspaces/${V5_WORKSPACE}/resources" ;;
+    0) v5-get $(v5-content-type "resource") "resources" ;;
+    *) v5-get $(v5-content-type "resource") "workspaces/${V5_WORKSPACE}/resources" ;;
   esac
 }
 
 function _v5::resource::show () {
   case "${V5_WORKSPACE}" in
-    0) v5-get "resource" "resources/${1}" ;;
-    *) v5-get "resource" "workspaces/${V5_WORKSPACE}/resources/${1}" ;;
+    0) v5-get $(v5-content-type "resource") "resources/${1}" ;;
+    *) v5-get $(v5-content-type "resource") "workspaces/${V5_WORKSPACE}/resources/${1}" ;;
   esac
 }
 
@@ -465,8 +484,8 @@ function _v5::resource::create () {
   fi
 
   case "${V5_WORKSPACE}" in
-    0) v5-post "resource" "resources" "${RESOURCE}" ;;
-    *) v5-post "resource" "workspaces/${V5_WORKSPACE}/resources" "${RESOURCE}" ;;
+    0) v5-post $(v5-content-type "resource") "resources" "${RESOURCE}" ;;
+    *) v5-post $(v5-content-type "resource") "workspaces/${V5_WORKSPACE}/resources" "${RESOURCE}" ;;
   esac
 }
 
@@ -497,15 +516,15 @@ EOF
 
 function _v5::message::list () {
   case "${V5_WORKSPACE}" in
-    0) v5-get "message" "messages" ;;
-    *) v5-get "message" "workspaces/${V5_WORKSPACE}/messages" ;;
+    0) v5-get $(v5-content-type "message") "messages" ;;
+    *) v5-get $(v5-content-type "message") "workspaces/${V5_WORKSPACE}/messages" ;;
   esac
 }
 
 function _v5::message::show () {
   case "${V5_WORKSPACE}" in
-    0) v5-get "message" "messages/${1}" ;;
-    *) v5-get "message" "workspaces/${V5_WORKSPACE}/messages/${1}" ;;
+    0) v5-get $(v5-content-type "message") "messages/${1}" ;;
+    *) v5-get $(v5-content-type "message") "workspaces/${V5_WORKSPACE}/messages/${1}" ;;
   esac
 }
 
@@ -577,8 +596,8 @@ function _v5::email () {
   logger info ${MESSAGE}
 
   case "${V5_WORKSPACE}" in
-    0) v5-post "message" "messages" ${MESSAGE};;
-    *) v5-post "message" "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
+    0) v5-post $(v5-content-type "message") "messages" ${MESSAGE};;
+    *) v5-post $(v5-content-type "message") "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
   esac
 }
 
@@ -602,7 +621,39 @@ function _v5::sms () {
 }"
 
   case "${V5_WORKSPACE}" in
-    0) v5-post "message" "messages" ${MESSAGE};;
-    *) v5-post "message" "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
+    0) v5-post $(v5-content-type "message") "messages" ${MESSAGE};;
+    *) v5-post $(v5-content-type "message") "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
   esac
+}
+
+#####################################################################
+# Sequence
+#####################################################################
+
+function _v5::sequence () {
+  (( $# > 0 && $+functions[_v5::sequence::$1] )) || {
+    cat <<EOF
+Usage: v5 sequence <command> [options]
+
+Available commands:
+
+  show   [id]
+  list
+
+EOF
+    return 1
+  }
+
+  local command="$1"
+  shift
+
+  _v5::sequence::$command "$@"
+}
+
+function _v5::sequence::list () {
+  v5-get "text/plain" "sequence"
+}
+
+function _v5::sequence::show () {
+  v5-get "text/plain" "sequence/${1}"
 }
