@@ -592,9 +592,6 @@ function _v5::email () {
    $(v5-create-web ${WEBM})
 }"
 
-  logger header "Send Message"
-  logger info ${MESSAGE}
-
   case "${V5_WORKSPACE}" in
     0) v5-post $(v5-content-type "message") "messages" ${MESSAGE};;
     *) v5-post $(v5-content-type "message") "workspaces/${V5_WORKSPACE}/messages" ${MESSAGE} ;;
