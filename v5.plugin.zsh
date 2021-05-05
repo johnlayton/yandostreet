@@ -106,17 +106,16 @@ function v5 () {
   _v5::$command "$@"
 }
 
-function v5-message-show () {
-  v5 message list   | jq -r ".messages" | \
-    v5-stream | v5-fields link createdTime subject | \
-    jq -r '{ subject : .subject, created : (.createdTime/1000 | strflocaltime("[%Y-%m-%dT%H:%M:%S]")), id : .link[] | select(.method=="GET") | .uri | split("\/") | last}' |
-    jq --slurp | jq -r '. | sort_by(.created) | reverse | .[] | "\(.id):\(.created) \(.subject)"'
-}
-
 function v5-workspace-show () {
   v5 workspace list | jq -r ".workspaces" | \
     v5-stream | v5-fields id projectName | \
     jq --slurp | jq -r '.[] | "\(.id):\(.projectName)"'
+}
+
+function v5-resource-show () {
+  v5 resource list   | jq -r ".resources" | \
+    v5-stream | v5-fields id name| \
+    jq --slurp | jq -r '.[] | "\(.id):\(.name)"'
 }
 
 function v5-contact-show () {
@@ -125,10 +124,11 @@ function v5-contact-show () {
     jq --slurp | jq -r '.[] | "\(.id):\(.firstName) \(.lastName)"'
 }
 
-function v5-resource-show () {
-  v5 resource list   | jq -r ".resources" | \
-    v5-stream | v5-fields id name| \
-    jq --slurp | jq -r '.[] | "\(.id):\(.name)"'
+function v5-message-show () {
+  v5 message list   | jq -r ".messages" | \
+    v5-stream | v5-fields link createdTime subject | \
+    jq -r '{ subject : .subject, created : (.createdTime/1000 | strflocaltime("[%Y-%m-%dT%H:%M:%S]")), id : .link[] | select(.method=="GET") | .uri | split("\/") | last}' |
+    jq --slurp | jq -r '. | sort_by(.created) | reverse | .[] | "\(.id):\(.created) \(.subject)"'
 }
 
 function _v5 {
